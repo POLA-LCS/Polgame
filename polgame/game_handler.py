@@ -135,19 +135,22 @@ class Game:
         
         for box in self.draw_list:
             radius = [-1, -1, -1, -1]
-            if box.radius is not None:
-                if isinstance(box.radius, (int, float)):
-                    radius = [int(box.radius)]*4
-                elif isinstance(box.radius, tuple):
-                    if len(box.radius) == 2:
-                        radius[0] = radius[3] = box.radius[0]
-                        radius[1] = radius[2] = box.radius[1]
-                    elif len(box.radius) == 3:
-                        radius[0] = box.radius[0]
-                        radius[1], radius[2] = box.radius[1:]
-                    elif len(box.radius) == 4:
-                        radius = box.radius
-            pg.draw.rect(self.screen, box.color, box, box.layer, -1, *radius)
+            if box.border.radius is not None:
+                if isinstance(box.border.radius, (int, float)):
+                    radius = [int(box.border.radius)]*4
+                elif isinstance(box.border.radius, tuple):
+                    if len(box.border.radius) == 2:
+                        radius[0] = radius[3] = box.border.radius[0]
+                        radius[1] = radius[2] = box.border.radius[1]
+                    elif len(box.border.radius) == 3:
+                        radius[0] = box.border.radius[0]
+                        radius[1], radius[2] = box.border.radius[1:]
+                    elif len(box.border.radius) == 4:
+                        radius = box.border.radius
+            if box.border.width > 0:
+                border = box.border.width / 2
+                pg.draw.rect(self.screen, box.border.color, (box.left - border, box.top - border, box.width + box.border.width, box.height + box.border.width), box.border.width, -1, *radius)
+            pg.draw.rect(self.screen, box.color, box, 0, 0, *radius)
         self.draw_list = []
         
         pg.display.update()
