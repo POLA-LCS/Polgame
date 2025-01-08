@@ -7,7 +7,7 @@ class Event:
         
     def __repr__(self):
         return f"Event({self.type}, {self.dict})"
-        
+                
     def __getitem__(self, key: str):
         return self.dict[key]
         

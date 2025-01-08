@@ -1,12 +1,16 @@
 import pygame as pg
+from pygame import event
 from .box_rect import *
 from .events_wrapper import *
+from typing import Callable, Optional, Any
+
+Drawable = Box | Surface
+EventHandler = Callable[[Event, Optional[Any]], Any]
 
 class Game:
-    
     DEFAULT_COLOR: Color = (18, 18, 18)
     
-    def __init__(self, title: str, width: int, height: int, background_color: Color = DEFAULT_COLOR, framerate: int = 60):
+    def __init__(self, width: int, height: int, title: str = 'Polgame', background_color: Color = DEFAULT_COLOR, framerate: int = 60):
         class Mouse:
             def __init__(self):
                 self.pressed  = tuple[bool, bool, bool]()
@@ -56,12 +60,12 @@ class Game:
         self.running = True
 
         # Boxes
-        self.boxes: list[Box] = []
-        self.draw_list: list[Box] = []
+        self.boxes = list[Box]()
+        self.draw_list = list[Drawable]()
 
         # Events
-        self.events: list[Event] = []
-        self.event_listeners: dict[int, list[tuple[callable, tuple]]] = {}
+        self.events = list[Event]()
+        self.event_listeners = dict[int, list[tuple[EventHandler, tuple]]]()
         self.clock = pg.time.Clock()
         self.framerate = framerate
 
@@ -71,22 +75,41 @@ class Game:
         # Keyboard
         self.active_keys = set[str]()
         
-    def load(self, *boxes: Box):
-        self.boxes.extend([*boxes])
+    def throw(self, type: int, props: dict):
+        self.events.append(Event(type, props))
+        
+    def catch(self, type: int, many: int):
+        events = list[Event]()
+        i = many
+        for event in self.events[::-1]:
+            if event.type == type:
+                if many == 1:
+                    return [event]
+
+                if i == 0:
+                    break
+                
+                events.append(event)
+                i -= 1
+        return events
+        
+    def load(self, *boxes: Box | BoxFormat):
+        for box in boxes:
+            self.boxes.append(box if isinstance(box, Box) else Box(*box))
         if len(boxes) == 1:
-            return boxes[0]
+            return self.boxes[-1]
         return boxes
         
-    def draw(self, *boxes: Box):
-        self.draw_list.extend([*boxes])
-    
-    def close(self):
+    def draw(self, *drawables: Drawable):
+        self.draw_list.extend([*drawables])
+            
+    def close(self, _: Event | None = None):
         self.running = False
         
-    def listen(self, type: int, callback: callable, *args):
+    def listen(self, type: int, callback: EventHandler, *args):
         self.event_listeners.setdefault(type, []).append((callback, args))
         
-    def listen_events(self):
+    def load_events(self):
         if not self.running:
             return
         
@@ -98,17 +121,19 @@ class Game:
             # KEY DOWN
             if event.type == pg.KEYDOWN:
                 self.active_keys.add(event.unicode)
+                event.dict['key'] = event.unicode
 
             # KEY UP
             if event.type == pg.KEYUP:
+                event.dict['key'] = event.unicode
                 if event.unicode in self.active_keys:
                     self.active_keys.remove(event.unicode)
             
             self.events.append(Event(event.type, event.dict))            
             
-            # KEY HOLD
-            for key in self.active_keys:
-                self.events.append(Event(KEYHOLD, {'key': key}))
+        # KEY HOLD
+        for key in self.active_keys:
+            self.events.append(Event(KEYHOLD, {'key': key}))
             
         for box in self.boxes:
             # HOVER, CLICK AND DRAG
@@ -134,23 +159,32 @@ class Game:
         self.screen.fill(self.background_color)
         
         for box in self.draw_list:
-            radius = [-1, -1, -1, -1]
-            if box.border.radius is not None:
-                if isinstance(box.border.radius, (int, float)):
-                    radius = [int(box.border.radius)]*4
-                elif isinstance(box.border.radius, tuple):
-                    if len(box.border.radius) == 2:
-                        radius[0] = radius[3] = box.border.radius[0]
-                        radius[1] = radius[2] = box.border.radius[1]
-                    elif len(box.border.radius) == 3:
-                        radius[0] = box.border.radius[0]
-                        radius[1], radius[2] = box.border.radius[1:]
-                    elif len(box.border.radius) == 4:
-                        radius = box.border.radius
-            if box.border.width > 0:
-                border = box.border.width / 2
-                pg.draw.rect(self.screen, box.border.color, (box.left - border, box.top - border, box.width + box.border.width, box.height + box.border.width), box.border.width, -1, *radius)
-            pg.draw.rect(self.screen, box.color, box, 0, 0, *radius)
+            if isinstance(box, Surface):
+                self.screen.blit(box, (0, 0))
+            elif isinstance(box, Box):
+                radius = [-1, -1, -1, -1]
+                if box.border.radius is not None:
+                    # RADIUS HANDLE
+                    
+                    if isinstance(box.border.radius, (int, float)):
+                        radius = [int(box.border.radius)]*4
+                    elif isinstance(box.border.radius, tuple):
+                        if len(box.border.radius) == 2:
+                            radius[0] = radius[3] = box.border.radius[0]
+                            radius[1] = radius[2] = box.border.radius[1]
+                        elif len(box.border.radius) == 3:
+                            radius[0] = box.border.radius[0]
+                            radius[1], radius[2] = box.border.radius[1:]
+                        elif len(box.border.radius) == 4:
+                            radius = box.border.radius
+                    
+                    # IF BOX HAS BORDER
+                    if box.border.width > 0:
+                        border = box.border.width / 2
+                        pg.draw.rect(self.screen, box.border.color, (box.left - border, box.top - border, box.width + box.border.width, box.height + box.border.width), box.border.width, -1, *radius)
+
+                # FINAL DRAW
+                pg.draw.rect(self.screen, box.color, box, 0, 0, *radius)
         self.draw_list = []
         
         pg.display.update()
