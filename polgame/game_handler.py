@@ -107,6 +107,8 @@ class Game:
         self.running = False
         
     def listen(self, type: int, callback: EventHandler, *args):
+        if type in NOT_IMPLEMENTED:
+            raise NotImplementedError(f'Event with type ({type}: {EVENT_NAME[type]}) is not implemented yet.')
         self.event_listeners.setdefault(type, []).append((callback, args))
         
     def load_events(self):
