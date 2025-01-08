@@ -1,4 +1,4 @@
-from pygame import event
+from pygame import event, QUIT
 from typing import Self
 
 EventCode = int | str
@@ -36,6 +36,7 @@ CLICK_BOX   = event.custom_type()
 RELEASE_BOX = event.custom_type()
 DRAG_BOX    = event.custom_type()
 KEYHOLD     = event.custom_type()
+CLOSE = QUIT
 
 NOT_IMPLEMENTED: list[int] = [
     UNHOVER_BOX,
