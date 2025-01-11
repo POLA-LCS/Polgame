@@ -21,9 +21,12 @@ class Box(Rect):
         self.color = color if color is not None else Box.DEFAULT_COLOR
         self.border = Box.Border()
 
-    @property
-    def coord(self):
-        return self.topleft
+    def set_color(self, new_color: Color):
+        self.color = new_color
+
+    def move_to(self, left: int, top: int):
+        self.left = left
+        self.top = top
 
     @property
     def size(self):

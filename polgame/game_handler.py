@@ -82,9 +82,9 @@ class Game:
     def throw(self, type: int, props: dict):
         self.events.append(Event(type, props))
 
-    def catch(self, type: int, many: int):
+    def catch(self, type: int, many: int = 0):
         events = list[Event]()
-        i = many
+        i = many if many else len(self.events)
         for event in self.events[::-1]:
             if event.type == type:
                 if many == 1:
@@ -131,18 +131,16 @@ class Game:
             # KEY DOWN
             if event.type == pg.KEYDOWN:
                 event.dict['key'] = event.key
+                event.dict['code'] = event.unicode
                 self.active_keys.add(event.key)
-                if event.unicode:
-                    self.active_keys.add(event.unicode)
-                    event.dict['code'] = event.unicode
+                self.active_keys.add(event.unicode)
 
             # KEY UP
             if event.type == pg.KEYUP:
-                event.dict['key'] = event.unicode
+                event.dict['key'] = event.key
+                event.dict['code'] = event.unicode
                 self.active_keys.remove(event.key)
-                if event.unicode:
-                    self.active_keys.remove(event.unicode)
-                    event.dict['code'] = event.unicode
+                self.active_keys.remove(event.unicode)
 
             self.throw(event.type, event.dict)
 
@@ -252,7 +250,7 @@ class Game:
         result = self.frame % frames == 0 and self.cycle % cycles == 0
         if result and id is not None:
             self.throw(UPDATE, {'id': id, 'frame': self.frame, 'cycle': self.cycle})
-        return 
+        return result
 
     @property
     def title(self) -> str:
